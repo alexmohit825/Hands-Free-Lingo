@@ -19,10 +19,9 @@ jobs:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 🛠️ Select Xcode 16.x
+      - name: 🛠️ Select Xcode Toolchain
         run: |
-          echo "Selecting latest Xcode toolchain..."
-          sudo xcode-select -s /Applications/Xcode_16.app || sudo xcode-select -s /Applications/Xcode_16.1.app || sudo xcode-select -s /Applications/Xcode_16.2.app || true
+          sudo xcode-select -s /Applications/Xcode_16.2.app || sudo xcode-select -s /Applications/Xcode_16.1.app || sudo xcode-select -s /Applications/Xcode_16.app || sudo xcode-select -s /Applications/Xcode.app
           xcodebuild -version
 
       - name: ⚙️ Install XcodeGen
@@ -46,16 +45,6 @@ jobs:
           xcrun altool --list-apps \
             --apiKey 38F6WA87DU \
             --apiIssuer 73c7355a-beef-4d79-919d-c3d7dec7747a
-
-      - name: 📦 Validate iOS Build on Simulator
-        run: |
-          xcodebuild clean build \
-            -project HandsFreeLingo.xcodeproj \
-            -scheme HandsFreeLingo \
-            -destination 'generic/platform=iOS Simulator' \
-            -configuration Release \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO
 
       - name: 🚀 Archive Release Candidate for App Store
         run: |
