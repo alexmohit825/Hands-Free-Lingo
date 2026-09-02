@@ -42,7 +42,7 @@ public final class StoreKitManager: ObservableObject {
         Task.detached {
             for await result in StoreKit.Transaction.updates {
                 do {
-                    let transaction = try Self.checkVerified(result)
+                    let transaction = try checkVerified(result)
                     await self.handle(transaction: transaction)
                     await transaction.finish()
                 } catch {
@@ -139,7 +139,7 @@ public final class StoreKitManager: ObservableObject {
 
             switch result {
             case .success(let verification):
-                let transaction = try Self.checkVerified(verification)
+                let transaction = try checkVerified(verification)
                 await handle(transaction: transaction)
                 await transaction.finish()
                 return true
@@ -189,13 +189,15 @@ public final class StoreKitManager: ObservableObject {
             }
         }
     }
+}
 
-    private static func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
-        switch result {
-        case .unverified(_, let error):
-            throw error
-        case .verified(let safe):
-            return safe
-        }
+// MARK: - Global Non-Isolated Verification Helper
+
+private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
+    switch result {
+    case .unverified(_, let error):
+        throw error
+    case .verified(let safe):
+        return safe
     }
 }
