@@ -40,7 +40,7 @@ public final class StoreKitManager: ObservableObject {
 
     private func listenForTransactions() -> Task<Void, Never> {
         Task.detached {
-            for await result in Transaction.updates {
+            for await result in StoreKit.Transaction.updates {
                 do {
                     let transaction = try self.checkVerified(result)
                     await self.handle(transaction: transaction)
@@ -70,7 +70,7 @@ public final class StoreKitManager: ObservableObject {
     public func updatePurchasedStatus() async {
         // 1. Check App Store In-App Purchase Entitlements
         var hasActiveEntitlement = false
-        for await result in Transaction.currentEntitlements {
+        for await result in StoreKit.Transaction.currentEntitlements {
             if case .verified(let transaction) = result {
                 if transaction.productID == Self.lifetimeProductID && transaction.revocationDate == nil {
                     hasActiveEntitlement = true
@@ -180,7 +180,7 @@ public final class StoreKitManager: ObservableObject {
 
     // MARK: - Helpers
 
-    private func handle(transaction: Transaction) async {
+    private func handle(transaction: StoreKit.Transaction) async {
         if transaction.productID == Self.lifetimeProductID {
             if transaction.revocationDate == nil {
                 setUnlocked(true)
