@@ -37,7 +37,7 @@ jobs:
 
       - name: 🏗️ Generate Native Xcode Project with Dynamic Build Number
         run: |
-          BUILD_NUM=${{ github.run_number }}
+          BUILD_NUM=$(( ${{ github.run_number }} + 10 ))
           echo "Setting CURRENT_PROJECT_VERSION to $BUILD_NUM"
           sed -i '' "s/CURRENT_PROJECT_VERSION: .*/CURRENT_PROJECT_VERSION: \"$BUILD_NUM\"/" project.yml
           xcodegen generate
