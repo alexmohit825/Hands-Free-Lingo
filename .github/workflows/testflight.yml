@@ -24,11 +24,11 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🛠️ Select Xcode 16.x (iOS 18+ SDK)
+      - name: 🛠️ Select Xcode (Compatible with macOS runner)
         run: |
           echo "Available Xcode installations:"
           ls -d /Applications/Xcode*.app
-          sudo xcode-select -s /Applications/Xcode_16.2.app || sudo xcode-select -s /Applications/Xcode_16.1.app || sudo xcode-select -s /Applications/Xcode_16.0.app || sudo xcode-select -s /Applications/Xcode.app
+          sudo xcode-select -s /Applications/Xcode_26.3.0.app || sudo xcode-select -s /Applications/Xcode_26.3.app || sudo xcode-select -s /Applications/Xcode_26.app || sudo xcode-select -s /Applications/Xcode.app
           xcodebuild -version
           swift --version
 
