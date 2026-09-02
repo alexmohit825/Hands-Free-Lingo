@@ -24,19 +24,23 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🛠️ Select Xcode 26.x (iOS 26+ SDK)
+      - name: 🛠️ Select Xcode 16.x (iOS 18+ SDK)
         run: |
           echo "Available Xcode installations:"
           ls -d /Applications/Xcode*.app
-          sudo xcode-select -s /Applications/Xcode_26.3.0.app || sudo xcode-select -s /Applications/Xcode_26.3.app || sudo xcode-select -s /Applications/Xcode_26.app || sudo xcode-select -s /Applications/Xcode.app
+          sudo xcode-select -s /Applications/Xcode_16.2.app || sudo xcode-select -s /Applications/Xcode_16.1.app || sudo xcode-select -s /Applications/Xcode_16.0.app || sudo xcode-select -s /Applications/Xcode.app
           xcodebuild -version
           swift --version
 
       - name: ⚙️ Install XcodeGen
         run: brew install xcodegen
 
-      - name: 🏗️ Generate Native Xcode Project
-        run: xcodegen generate
+      - name: 🏗️ Generate Native Xcode Project with Dynamic Build Number
+        run: |
+          BUILD_NUM=${{ github.run_number }}
+          echo "Setting CURRENT_PROJECT_VERSION to $BUILD_NUM"
+          sed -i '' "s/CURRENT_PROJECT_VERSION: .*/CURRENT_PROJECT_VERSION: \"$BUILD_NUM\"/" project.yml
+          xcodegen generate
 
       - name: 🔑 Configure App Store Connect API Credentials
         env:

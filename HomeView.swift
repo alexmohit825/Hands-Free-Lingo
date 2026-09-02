@@ -13,6 +13,20 @@ public struct HomeView: View {
     @State private var generationError: String? = nil
     @State private var generatedUnits: [Language: [Unit]] = [:]
     
+    // StoreKit 2 Lifetime Entitlement Manager
+    @ObservedObject private var storeManager = StoreKitManager.shared
+    @State private var showPaywall: Bool = false
+
+    /// Determines if a unit is included in the free trial preview tier
+    /// (First unit of Beginner level for each language is free to try)
+    private func isUnitFree(_ unit: Unit) -> Bool {
+        let baseUnits = Curriculum.getUnits(for: selectedLanguage).filter { $0.level == .beginner }
+        return baseUnits.first?.id == unit.id
+    }
+
+    private func isUnitUnlocked(_ unit: Unit) -> Bool {
+        storeManager.isUnlocked || isUnitFree(unit)
+    }
 
     private var placeholderText: String {
         switch selectedLanguage {
@@ -181,8 +195,13 @@ public struct HomeView: View {
     }
     
     private func unitRowButton(unit: Unit) -> some View {
-        Button(action: {
-            activeUnit = unit
+        let isUnlocked = isUnitUnlocked(unit)
+        return Button(action: {
+            if isUnlocked {
+                activeUnit = unit
+            } else {
+                showPaywall = true
+            }
         }) {
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
@@ -195,6 +214,16 @@ public struct HomeView: View {
                             .cornerRadius(6)
                             .foregroundColor(.gray)
                         
+                        if isUnitFree(unit) && !storeManager.isUnlocked {
+                            Text("FREE PREVIEW")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Color.blue.opacity(0.15))
+                                .cornerRadius(6)
+                                .foregroundColor(.cyan)
+                        }
+
                         if passedUnits.contains(unit.id) {
                             Text("PASSED")
                                 .font(.system(size: 9, weight: .bold, design: .monospaced))
@@ -230,16 +259,22 @@ public struct HomeView: View {
                 
                 Spacer()
                 
-                Image(systemName: "chevron.right")
-                    .foregroundColor(.white.opacity(0.2))
-                    .font(.system(size: 14, weight: .bold))
+                if isUnlocked {
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.white.opacity(0.2))
+                        .font(.system(size: 14, weight: .bold))
+                } else {
+                    Image(systemName: "lock.fill")
+                        .foregroundColor(.yellow.opacity(0.85))
+                        .font(.system(size: 14, weight: .semibold))
+                }
             }
             .padding(18)
             .background(Color.white.opacity(0.04))
             .cornerRadius(22)
             .overlay(
                 RoundedRectangle(cornerRadius: 22)
-                    .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                    .stroke(isUnlocked ? Color.white.opacity(0.05) : Color.yellow.opacity(0.25), lineWidth: 1)
             )
         }
     }
@@ -407,6 +442,37 @@ public struct HomeView: View {
             }
             .navigationTitle("VocalLingo")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                if !storeManager.isUnlocked {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(action: {
+                            showPaywall = true
+                        }) {
+                            HStack(spacing: 5) {
+                                Image(systemName: "sparkles")
+                                    .font(.system(size: 11, weight: .bold))
+                                Text("UNLOCK ALL")
+                                    .font(.system(size: 11, weight: .black, design: .monospaced))
+                            }
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.yellow, Color.orange],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .cornerRadius(12)
+                            .shadow(color: Color.yellow.opacity(0.3), radius: 6, x: 0, y: 3)
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+            }
             .navigationDestination(item: $activeUnit) { unit in
                 PracticeView(
                     unit: unit,
@@ -447,7 +513,14 @@ public struct HomeView: View {
         if let currentIndex = allUnits.firstIndex(where: { $0.id == currentUnit.id }) {
             let nextIndex = currentIndex + 1
             if nextIndex < allUnits.count {
-                activeUnit = allUnits[nextIndex]
+                let nextUnit = allUnits[nextIndex]
+                if isUnitUnlocked(nextUnit) {
+                    activeUnit = nextUnit
+                } else {
+                    isAutoplayActive = false
+                    activeUnit = nil
+                    showPaywall = true
+                }
             } else {
                 let nextLevel: DifficultyLevel
                 switch selectedLevel {
@@ -462,7 +535,13 @@ public struct HomeView: View {
                 let nextAllUnits = nextBaseUnits + nextCustomUnits
                 
                 if let firstUnit = nextAllUnits.first {
-                    activeUnit = firstUnit
+                    if isUnitUnlocked(firstUnit) {
+                        activeUnit = firstUnit
+                    } else {
+                        isAutoplayActive = false
+                        activeUnit = nil
+                        showPaywall = true
+                    }
                 } else {
                     isAutoplayActive = false
                     activeUnit = nil
@@ -494,6 +573,11 @@ public struct HomeView: View {
     /// disabled, model still downloading) so development on non-AI hardware
     /// keeps working. No network calls, no external APIs.
     private func generateUnitDraft(topic: String) {
+        if !storeManager.isUnlocked {
+            showPaywall = true
+            return
+        }
+
         generationError = nil
         generatingUnit = true
 

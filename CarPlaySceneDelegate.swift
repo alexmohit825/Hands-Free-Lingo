@@ -60,13 +60,19 @@ public final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationScene
 
     private func listTemplate(for language: Language) -> CPListTemplate {
         let units = Curriculum.getUnits(for: language)
+        let isOverallUnlocked = UserDefaults.standard.bool(forKey: "vocal_lingo_is_unlocked")
+        let firstBeginnerId = units.filter { $0.level == .beginner }.first?.id
 
         // One CPListSection per difficulty level for a driver-safe scan.
         let sections: [CPListSection] = DifficultyLevel.allCases.compactMap { level in
             let items: [CPListItem] = units
                 .filter { $0.level == level }
                 .map { unit in
-                    let item = CPListItem(text: unit.title, detailText: unit.description)
+                    let isFree = (unit.id == firstBeginnerId)
+                    let isUnlocked = isOverallUnlocked || isFree
+                    let title = isUnlocked ? unit.title : "\(unit.title) 🔒"
+                    let detail = isUnlocked ? unit.description : "Full Access Required • \(unit.description)"
+                    let item = CPListItem(text: title, detailText: detail)
                     item.handler = { [weak self] _, completion in
                         self?.startUnit(unit, language: language)
                         completion()
@@ -88,6 +94,24 @@ public final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationScene
     // MARK: - Playback flow (mirrors phone-side PracticeView autoplay)
 
     private func startUnit(_ unit: Unit, language: Language) {
+        let baseUnits = Curriculum.getUnits(for: language).filter { $0.level == .beginner }
+        let isFree = baseUnits.first?.id == unit.id
+        let isUnlocked = UserDefaults.standard.bool(forKey: "vocal_lingo_is_unlocked") || isFree
+
+        guard isUnlocked else {
+            print("[CarPlay] Locked unit selected: \(unit.title)")
+            let alert = CPAlertTemplate(
+                titleVariants: ["Unlock Required", "Please unlock full access on your iPhone to play this lesson."],
+                actions: [
+                    CPAlertAction(title: "OK", style: .default, handler: { [weak self] _ in
+                        self?.interfaceController?.dismissTemplate(animated: true, completion: nil)
+                    })
+                ]
+            )
+            interfaceController?.presentTemplate(alert, animated: true, completion: nil)
+            return
+        }
+
         print("[CarPlay] startUnit: \(unit.title) [\(language.rawValue)]")
         activeUnit = unit
         activeLanguage = language
