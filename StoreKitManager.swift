@@ -85,25 +85,29 @@ public final class StoreKitManager: ObservableObject {
         }
 
         // 2. Grandfather Legacy Paid Users (Guideline 3.1.2)
-        // If the user purchased the original paid app (v1.0.2 or earlier), unlock permanently.
+        // Only grandfather in production. In Sandbox/TestFlight/App Review,
+        // originalAppVersion always defaults to "1.0", which would falsely unlock
+        // the app and hide in-app purchases from Apple reviewers.
         do {
             if case .verified(let appTransaction) = try await AppTransaction.shared {
-                let originalVersion = appTransaction.originalAppVersion
-                print("[StoreKit] AppTransaction verified. originalAppVersion: \(originalVersion)")
-                if isLegacyPaidVersion(originalVersion) {
-                    print("[StoreKit] Grandfathering legacy user from version \(originalVersion)")
-                    setUnlocked(true)
-                    return
+                print("[StoreKit] AppTransaction environment: \(appTransaction.environment), originalAppVersion: \(appTransaction.originalAppVersion)")
+                if appTransaction.environment == .production {
+                    let originalVersion = appTransaction.originalAppVersion
+                    if isLegacyPaidVersion(originalVersion) {
+                        print("[StoreKit] Grandfathering verified production user from version \(originalVersion)")
+                        setUnlocked(true)
+                        return
+                    }
+                } else {
+                    print("[StoreKit] Non-production environment detected (\(appTransaction.environment)). Skipping legacy grandfathering so In-App Purchases remain testable in Sandbox/App Review.")
                 }
             }
         } catch {
-            print("[StoreKit] AppTransaction check failed or in simulator: \(error)")
+            print("[StoreKit] AppTransaction check failed: \(error)")
         }
 
-        // Retain cache if already unlocked, otherwise lock
-        if !UserDefaults.standard.bool(forKey: "vocal_lingo_is_unlocked") {
-            setUnlocked(false)
-        }
+        // Neither an active entitlement nor production legacy purchase found -> ensure locked
+        setUnlocked(false)
     }
 
     /// Determines whether the original purchase version qualifies as a legacy upfront purchase
@@ -125,6 +129,10 @@ public final class StoreKitManager: ObservableObject {
     // MARK: - Purchase Flow
 
     public func purchase() async -> Bool {
+        if lifetimeProduct == nil {
+            await loadProducts()
+        }
+
         guard let product = lifetimeProduct else {
             errorMessage = "Product not available. Please check your internet connection."
             return false

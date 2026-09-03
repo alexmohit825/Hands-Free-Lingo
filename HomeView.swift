@@ -413,6 +413,70 @@ public struct HomeView: View {
         )
     }
     
+    private var lifetimePromoBanner: some View {
+        Button(action: {
+            showPaywall = true
+        }) {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(colors: [Color.yellow, Color.orange], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 42, height: 42)
+                    Image(systemName: "sparkles")
+                        .foregroundColor(.black)
+                        .font(.system(size: 18, weight: .bold))
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text("COMMUTE PASS")
+                            .font(.system(size: 9, weight: .black, design: .monospaced))
+                            .foregroundColor(.yellow)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.yellow.opacity(0.15))
+                            .cornerRadius(5)
+
+                        Text("ONE-TIME $4.99")
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .foregroundColor(.gray)
+                    }
+
+                    Text("Unlock Lifetime Full Access")
+                        .font(.system(.subheadline, design: .rounded))
+                        .fontWeight(.heavy)
+                        .foregroundColor(.white)
+
+                    Text("All 204 units across 4 languages & Apple CarPlay")
+                        .font(.system(size: 11, design: .rounded))
+                        .foregroundColor(.gray)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.yellow.opacity(0.8))
+                    .font(.system(size: 14, weight: .bold))
+            }
+            .padding(14)
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.12, green: 0.10, blue: 0.04),
+                        Color(red: 0.06, green: 0.06, blue: 0.08)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .cornerRadius(18)
+            .overlay(
+                RoundedRectangle(cornerRadius: 18)
+                    .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
+            )
+        }
+    }
+
     public var body: some View {
         NavigationStack {
             ZStack {
@@ -429,6 +493,10 @@ public struct HomeView: View {
                     
                     ScrollView {
                         VStack(spacing: 16) {
+                            if !storeManager.isUnlocked {
+                                lifetimePromoBanner
+                            }
+
                             ForEach(currentUnits) { unit in
                                 unitRowButton(unit: unit)
                             }
@@ -443,8 +511,8 @@ public struct HomeView: View {
             .navigationTitle("VocalLingo")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                if !storeManager.isUnlocked {
-                    ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    if !storeManager.isUnlocked {
                         Button(action: {
                             showPaywall = true
                         }) {
@@ -466,6 +534,27 @@ public struct HomeView: View {
                             )
                             .cornerRadius(12)
                             .shadow(color: Color.yellow.opacity(0.3), radius: 6, x: 0, y: 3)
+                        }
+                    } else {
+                        Button(action: {
+                            showPaywall = true
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "crown.fill")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(.yellow)
+                                Text("LIFETIME")
+                                    .font(.system(size: 10, weight: .black, design: .monospaced))
+                                    .foregroundColor(.white)
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.white.opacity(0.1))
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
+                            )
                         }
                     }
                 }

@@ -112,39 +112,59 @@ public struct PaywallView: View {
 
                         // Pricing CTA Button
                         VStack(spacing: 12) {
-                            Button(action: {
-                                Task {
-                                    let success = await storeManager.purchase()
-                                    if success {
-                                        dismiss()
-                                    }
-                                }
-                            }) {
-                                HStack {
-                                    if storeManager.isPurchasing {
-                                        ProgressView()
-                                            .tint(.black)
-                                            .padding(.trailing, 8)
-                                    }
-                                    
-                                    Text(purchaseButtonTitle)
+                            if storeManager.isUnlocked {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "checkmark.seal.fill")
+                                        .foregroundColor(.green)
+                                        .font(.system(size: 20))
+                                    Text("Lifetime Full Access Active")
                                         .font(.system(.headline, design: .rounded))
-                                        .fontWeight(.heavy)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
-                                .background(
-                                    LinearGradient(
-                                        colors: [Color.blue, Color.cyan],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .foregroundColor(.black)
+                                .background(Color.green.opacity(0.15))
                                 .cornerRadius(18)
-                                .shadow(color: Color.blue.opacity(0.4), radius: 12, x: 0, y: 6)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 18)
+                                        .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                                )
+                            } else {
+                                Button(action: {
+                                    Task {
+                                        let success = await storeManager.purchase()
+                                        if success {
+                                            dismiss()
+                                        }
+                                    }
+                                }) {
+                                    HStack {
+                                        if storeManager.isPurchasing {
+                                            ProgressView()
+                                                .tint(.black)
+                                                .padding(.trailing, 8)
+                                        }
+                                        
+                                        Text(purchaseButtonTitle)
+                                            .font(.system(.headline, design: .rounded))
+                                            .fontWeight(.heavy)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 16)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [Color.blue, Color.cyan],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .foregroundColor(.black)
+                                    .cornerRadius(18)
+                                    .shadow(color: Color.blue.opacity(0.4), radius: 12, x: 0, y: 6)
+                                }
+                                .disabled(storeManager.isPurchasing)
                             }
-                            .disabled(storeManager.isPurchasing)
 
                             // Restore Purchases Button
                             Button(action: {
@@ -190,6 +210,11 @@ public struct PaywallView: View {
                             .font(.system(size: 22))
                             .foregroundColor(.white.opacity(0.4))
                     }
+                }
+            }
+            .task {
+                if storeManager.lifetimeProduct == nil {
+                    await storeManager.loadProducts()
                 }
             }
         }
